@@ -134,6 +134,157 @@ function env_get($key)
     return env_normalize_value($value);
 }
 
+function app_root()
+{
+    static $root = null;
+
+    if ($root === null) {
+        $resolved = realpath(__DIR__ . '/..');
+        $root = ($resolved !== false) ? $resolved : (__DIR__ . '/..');
+    }
+
+    return $root;
+}
+
+function storage_path($relative = '')
+{
+    $relative = (string) $relative;
+    $relative = ltrim($relative, '/');
+
+    $base = app_root() . '/storage';
+    return $relative !== '' ? ($base . '/' . $relative) : $base;
+}
+
+function app_debug_enabled()
+{
+    $value = env_get('YEFA_APP_DEBUG');
+    if (!is_string($value) || $value === '') {
+        return false;
+    }
+
+    $value = strtolower(trim($value));
+    return in_array($value, ['1', 'true', 'yes', 'on'], true);
+}
+
+function app_log($message)
+{
+    $message = trim((string) $message);
+    if ($message === '') {
+        return;
+    }
+
+    $line = '[' . date('c') . '] ' . $message . "\n";
+    $logFile = storage_path('logs/app.log');
+    $logDir = dirname($logFile);
+
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0775, true);
+    }
+
+    $ok = @file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
+    if ($ok === false) {
+        // Fallback to the server error log (viewable in cPanel "Errors").
+        error_log($message);
+    }
+}
+
+function app_report_exception(Throwable $e, $context = [])
+{
+    $ctx = '';
+    if (is_array($context) && $context) {
+        $encoded = json_encode($context, JSON_UNESCAPED_SLASHES);
+        $ctx = is_string($encoded) ? $encoded : '';
+    }
+
+    $request = [
+        'method' => isset($_SERVER['REQUEST_METHOD']) ? (string) $_SERVER['REQUEST_METHOD'] : '',
+        'uri' => isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '',
+        'ip' => isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '',
+    ];
+
+    $requestJson = json_encode($request, JSON_UNESCAPED_SLASHES);
+    $requestJson = is_string($requestJson) ? $requestJson : '';
+
+    app_log('Exception ' . get_class($e) . ': ' . $e->getMessage());
+    app_log('Location: ' . $e->getFile() . ':' . $e->getLine());
+    if ($requestJson !== '') {
+        app_log('Request: ' . $requestJson);
+    }
+    if ($ctx !== '') {
+        app_log('Context: ' . $ctx);
+    }
+}
+
+function db_exception_public_message(Throwable $e)
+{
+    // In debug mode, show the raw error (use only temporarily in production).
+    if (app_debug_enabled()) {
+        return 'Database error (debug): ' . $e->getMessage();
+    }
+
+    // Keep the public message safe, but actionable.
+    $msg = strtolower((string) $e->getMessage());
+
+    if (!db_is_configured()) {
+        return 'Database is not configured. Set YEFA_DB_DSN (and YEFA_DB_USER/YEFA_DB_PASS if needed).';
+    }
+
+    // Missing schema (MySQL + SQLite common phrases).
+    if (strpos($msg, 'users') !== false && (
+        strpos($msg, 'no such table') !== false ||
+        strpos($msg, 'doesn\'t exist') !== false ||
+        strpos($msg, 'not found') !== false
+    )) {
+        return 'Database schema is missing. Import database/schema.mysql.sql (or database/schema.sqlite.sql) into your database.';
+    }
+
+    // SQLite path/permissions.
+    if (strpos($msg, 'unable to open database file') !== false || strpos($msg, 'not writable') !== false) {
+        return 'SQLite path is not writable on this host. Set YEFA_DB_DSN to a writable (and ideally persistent) path.';
+    }
+
+    // PDO driver not installed/enabled.
+    if (strpos($msg, 'could not find driver') !== false) {
+        $dsn = db_config();
+        $dsn = isset($dsn['dsn']) ? (string) $dsn['dsn'] : '';
+        if (stripos($dsn, 'mysql:') === 0) {
+            return 'This server does not have the MySQL PDO driver enabled (pdo_mysql). Enable it in your hosting PHP settings.';
+        }
+        if (stripos($dsn, 'sqlite:') === 0) {
+            return 'This server does not have the SQLite PDO driver enabled (pdo_sqlite). Enable it in your hosting PHP settings.';
+        }
+        return 'This server is missing the required PDO database driver.';
+    }
+
+    // MySQL common connection/auth errors.
+    if (strpos($msg, 'access denied') !== false || strpos($msg, 'sqlstate[28000]') !== false) {
+        return 'Database login failed. Verify YEFA_DB_USER/YEFA_DB_PASS and that the user is added to the database with privileges.';
+    }
+
+    if (strpos($msg, 'unknown database') !== false || (strpos($msg, '1049') !== false && strpos($msg, 'sqlstate') !== false)) {
+        return 'Database name was not found. Create the database (in cPanel → MySQL Databases) and update the dbname in YEFA_DB_DSN.';
+    }
+
+    if (
+        strpos($msg, 'connection refused') !== false ||
+        strpos($msg, 'timed out') !== false ||
+        strpos($msg, 'server has gone away') !== false ||
+        (strpos($msg, '2002') !== false && strpos($msg, 'sqlstate') !== false)
+    ) {
+        return 'Cannot connect to the database server. Check the host/port in YEFA_DB_DSN and firewall/remote-MySQL settings.';
+    }
+
+    if (strpos($msg, 'getaddrinfo failed') !== false || strpos($msg, 'php_network_getaddresses') !== false) {
+        return 'Database host cannot be resolved. Double-check the host in YEFA_DB_DSN.';
+    }
+
+    if (strpos($msg, 'unknown character set') !== false) {
+        return 'MySQL does not support the configured charset. Try charset=utf8 (or upgrade MySQL/MariaDB) and re-test.';
+    }
+
+    return 'Database error. Please try again.';
+}
+
 function config()
 {
     static $config = null;

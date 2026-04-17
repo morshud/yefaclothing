@@ -50,16 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('my-account.php');
           }
         } catch (Throwable $e) {
-          $msg = $e->getMessage();
-          if (stripos($msg, 'users') !== false && (stripos($msg, 'not found') !== false || stripos($msg, 'no such table') !== false)) {
-            $error = 'Database schema is missing. Import database/schema.mysql.sql (or database/schema.sqlite.sql) into your database.';
-          } elseif (!db_is_configured()) {
-            $error = 'Database is not configured. Set YEFA_DB_DSN (and YEFA_DB_USER/YEFA_DB_PASS if needed).';
-          } elseif (stripos($msg, 'unable to open database file') !== false || stripos($msg, 'not writable') !== false) {
-            $error = 'SQLite path is not writable on this host. Set YEFA_DB_DSN to a writable (and ideally persistent) path.';
-          } else {
-            $error = 'Database error. Please try again.';
-          }
+          app_report_exception($e, ['page' => 'login', 'action' => 'register']);
+          $error = db_exception_public_message($e);
         }
       }
     } else {
@@ -83,16 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('my-account.php');
           }
         } catch (Throwable $e) {
-          $msg = $e->getMessage();
-          if (stripos($msg, 'users') !== false && (stripos($msg, 'not found') !== false || stripos($msg, 'no such table') !== false)) {
-            $error = 'Database schema is missing. Import database/schema.mysql.sql (or database/schema.sqlite.sql) into your database.';
-          } elseif (!db_is_configured()) {
-            $error = 'Database is not configured. Set YEFA_DB_DSN (and YEFA_DB_USER/YEFA_DB_PASS if needed).';
-          } elseif (stripos($msg, 'unable to open database file') !== false || stripos($msg, 'not writable') !== false) {
-            $error = 'SQLite path is not writable on this host. Set YEFA_DB_DSN to a writable (and ideally persistent) path.';
-          } else {
-            $error = 'Database error. Please try again.';
-          }
+          app_report_exception($e, ['page' => 'login', 'action' => 'login']);
+          $error = db_exception_public_message($e);
         }
       }
     }

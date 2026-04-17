@@ -180,6 +180,12 @@ Visit:
 
 If you see “Database schema is missing”, import the schema file into your database.
 
+### Troubleshooting: generic “Database error” on cPanel
+
+- Check the server-side log at `storage/logs/app.log` (created automatically when an exception happens).
+- Or in cPanel, open **Errors** to view the PHP `error_log` output.
+- To temporarily show the underlying database error in the browser, set `YEFA_APP_DEBUG=1` in your `.env` (turn it back off after fixing).
+
 ## Project layout
 
 - `public/` — web root (`index.php`, `login.php`, `my-account.php`, `router.php`, `.htaccess`)
