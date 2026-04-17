@@ -12,7 +12,7 @@ if ($flashError) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && is_logged_in()) {
-  redirect('my-account');
+  redirect('my-account.php');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'logout') {
       auth_logout();
       flash_set('auth_success', 'Signed out.');
-      redirect('login');
+      redirect('login.php');
     }
 
     if ($action === 'register') {
@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = auth_user_create($registerEmail, $registerPassword);
             auth_set_logged_in_user($user);
             flash_set('auth_success', 'Account created successfully.');
-            redirect('my-account');
+            redirect('my-account.php');
           }
         } catch (Throwable $e) {
           $msg = $e->getMessage();
@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Invalid email or password.';
           } else {
             auth_set_logged_in_user($user);
-            redirect('my-account');
+            redirect('my-account.php');
           }
         } catch (Throwable $e) {
           $msg = $e->getMessage();

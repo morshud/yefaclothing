@@ -58,18 +58,81 @@ function env_load($path)
             }
         }
 
-        $current = getenv($key);
-        if ($current !== false && $current !== '') {
+        $current = env_get($key);
+        if (is_string($current) && $current !== '') {
             continue;
         }
 
-        putenv($key . '=' . $value);
+        if (function_exists('putenv')) {
+            putenv($key . '=' . $value);
+        }
         $_ENV[$key] = $value;
         $_SERVER[$key] = $value;
     }
 }
 
 env_load(__DIR__ . '/../.env');
+
+function env_normalize_value($value)
+{
+    if (!is_string($value)) {
+        return null;
+    }
+
+    $value = trim($value);
+    if ($value === '') {
+        return null;
+    }
+
+    // Strip inline comments for unquoted values (matches .env behavior).
+    if ($value[0] !== '"' && $value[0] !== "'") {
+        $hashPos = strpos($value, ' #');
+        if ($hashPos !== false) {
+            $value = rtrim(substr($value, 0, $hashPos));
+        }
+    }
+
+    $len = strlen($value);
+    if ($len >= 2) {
+        $first = $value[0];
+        $last = $value[$len - 1];
+        if (($first === '"' && $last === '"') || ($first === "'" && $last === "'")) {
+            $value = substr($value, 1, -1);
+            if ($first === '"') {
+                $value = str_replace(['\\n', '\\r', '\\t', '\\"', '\\\\'], ["\n", "\r", "\t", '"', '\\'], $value);
+            }
+        }
+    }
+
+    return $value;
+}
+
+function env_get($key)
+{
+    $key = (string) $key;
+    if ($key === '') {
+        return null;
+    }
+
+    $value = null;
+
+    if (function_exists('getenv')) {
+        $v = getenv($key);
+        if ($v !== false) {
+            $value = $v;
+        }
+    }
+
+    if ($value === null && array_key_exists($key, $_ENV)) {
+        $value = $_ENV[$key];
+    }
+
+    if ($value === null && array_key_exists($key, $_SERVER)) {
+        $value = $_SERVER[$key];
+    }
+
+    return env_normalize_value($value);
+}
 
 function config()
 {
@@ -87,9 +150,9 @@ function db_config()
     $cfg = config();
     $db = (isset($cfg['db']) && is_array($cfg['db'])) ? $cfg['db'] : [];
 
-    $dsn = getenv('YEFA_DB_DSN');
-    $user = getenv('YEFA_DB_USER');
-    $pass = getenv('YEFA_DB_PASS');
+    $dsn = env_get('YEFA_DB_DSN');
+    $user = env_get('YEFA_DB_USER');
+    $pass = env_get('YEFA_DB_PASS');
 
     $dsn = is_string($dsn) && $dsn !== '' ? $dsn : (isset($db['dsn']) && is_string($db['dsn']) ? $db['dsn'] : '');
     $user = is_string($user) && $user !== '' ? $user : (isset($db['user']) && is_string($db['user']) ? $db['user'] : '');
@@ -354,8 +417,8 @@ function auth_credentials()
     $defaultEmail = isset($cfg['auth']['admin_email']) ? $cfg['auth']['admin_email'] : '';
     $defaultHash = isset($cfg['auth']['admin_password_hash']) ? $cfg['auth']['admin_password_hash'] : '';
 
-    $email = getenv('YEFA_ADMIN_EMAIL');
-    $hash = getenv('YEFA_ADMIN_PASSWORD_HASH');
+    $email = env_get('YEFA_ADMIN_EMAIL');
+    $hash = env_get('YEFA_ADMIN_PASSWORD_HASH');
 
     return [
         'email' => is_string($email) && $email !== '' ? $email : (is_string($defaultEmail) ? $defaultEmail : ''),

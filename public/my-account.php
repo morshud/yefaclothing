@@ -4,7 +4,7 @@ require __DIR__ . '/../src/bootstrap.php';
 
 if (!is_logged_in()) {
     flash_set('auth_error', 'Please log in to access your account.');
-  redirect('login');
+  redirect('login.php');
 }
 
 $error = null;
@@ -17,13 +17,13 @@ if ($flashError) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_validate()) {
         flash_set('auth_error', 'Security check failed. Please try again.');
-    redirect('my-account');
+  redirect('my-account.php');
     }
 
     if (isset($_POST['action']) && $_POST['action'] === 'logout') {
     auth_logout();
         flash_set('auth_success', 'Signed out.');
-      redirect('login');
+      redirect('login.php');
     }
 }
 

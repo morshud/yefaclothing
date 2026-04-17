@@ -10,7 +10,7 @@ $pageTitleText = isset($pageTitle) && is_string($pageTitle) && $pageTitle !== ''
     ? ($pageTitle . ' | ' . $siteName)
     : $defaultTitle;
 
-$accountHref = is_logged_in() ? '/my-account' : '/login';
+$accountHref = is_logged_in() ? '/my-account.php' : '/login.php';
 
 ?><!doctype html>
 <html lang="en">

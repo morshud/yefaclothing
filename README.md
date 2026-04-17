@@ -79,6 +79,37 @@ Optional (currently not required for the basic login/register flow):
 - `YEFA_ADMIN_EMAIL`
 - `YEFA_ADMIN_PASSWORD_HASH`
 
+## Deploy to Wasmer
+
+Two common differences on Wasmer vs localhost:
+
+1) Your local `.env` file is **not** deployed if you deploy from git (it is in `.gitignore`).
+2) Clean URLs like `/login` require URL rewriting (Wasmer setups often only serve real files like `/login.php` unless you configure a router).
+
+### 1) Set environment variables (recommended)
+
+In your Wasmer app settings, add these environment variables:
+
+- `YEFA_DB_DSN` (required)
+- `YEFA_DB_USER` (required for MySQL)
+- `YEFA_DB_PASS` (required for MySQL)
+
+Notes:
+
+- In dashboards/UIs, paste the **raw value** (no surrounding quotes). Example DSN value:
+  - `mysql:host=YOUR_HOST;port=3306;dbname=YOUR_DB;charset=utf8mb4`
+- Make sure the runtime has the right PDO driver enabled (`pdo_mysql` for MySQL, `pdo_sqlite` for SQLite).
+
+### 2) Clean URLs on Wasmer (optional)
+
+If your Wasmer deployment runs the PHP built-in server, start it with the router script so extensionless URLs work:
+
+```bash
+php -S 0.0.0.0:$PORT -t public public/router.php
+```
+
+If you can’t enable rewriting/router support, use the `.php` URLs (e.g. `/login.php`, `/my-account.php`).
+
 ## Deploy to cPanel (Apache)
 
 This project is designed to run at the domain root (not inside a subfolder like `/yefaclothing`) because redirects use absolute paths like `/login`.
