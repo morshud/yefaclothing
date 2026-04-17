@@ -1,0 +1,11 @@
+# Route all requests through /public without changing server DocumentRoot.
+# Requires: AllowOverride All, mod_rewrite enabled.
+
+RewriteEngine On
+
+# Don't rewrite if the request already targets /public or ACME challenges.
+RewriteCond %{REQUEST_URI} !^/public(?:/|$) [NC]
+RewriteCond %{REQUEST_URI} !^/\.well-known(?:/|$) [NC]
+
+# Internally map URI to /public/<uri>
+RewriteRule ^(.*)$ public/$1 [L]
