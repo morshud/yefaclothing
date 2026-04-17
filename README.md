@@ -62,6 +62,12 @@ YEFA_DB_USER=YOUR_USER
 YEFA_DB_PASS=YOUR_PASSWORD
 ```
 
+If your MySQL server uses a non-default port, add it to the DSN:
+
+```env
+YEFA_DB_DSN="mysql:host=127.0.0.1;port=3306;dbname=yefaclothing;charset=utf8mb4"
+```
+
 ## Environment variables
 
 - `YEFA_DB_DSN` (required)
